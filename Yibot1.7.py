@@ -226,4 +226,4 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # -------------------- INICIAR EL BOT --------------------
-bot.run("MTM2NDM4MzUxNjM1NTE5OTAzNg.GzjNlN.ZYH5pEYkfcrOML4KXbZhS-SZKZ3MNkpVtujCYs")
+bot.run("Mi_token")
