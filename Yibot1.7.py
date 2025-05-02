@@ -6,7 +6,6 @@ import os
 from datetime import datetime, timedelta
 from collections import defaultdict
 import time
-import os
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -227,4 +226,4 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # -------------------- INICIAR EL BOT --------------------
-bot.run("Mi_token")
+bot.correr(os.getenv("DISCORD_TOKEN"))
