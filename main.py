@@ -1,15 +1,20 @@
 import discord
-from discord.ext import tasks
-from discord import Bot, Option
+from discord.ext import tasks, commands
+from discord import Option
 import json
 import os
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from dotenv import load_dotenv
+import openai
+
 load_dotenv()
 
 intents = discord.Intents.all()
-bot = Bot(intents=intents)  # Usamos discord.Bot para Slash Commands
+bot = commands.Bot(command_prefix="!", intents=intents)
+tree = discord.app_commands.CommandTree(bot)
+
+openai.api_key = os.getenv("Clave_OpenAI")  # Asegúrate de tener esta clave en tu archivo .env
 
 # --- Crear Embed Estilizado ---
 def crear_embed(titulo, descripcion, color=discord.Color.red()):
@@ -60,82 +65,83 @@ async def verificar_muteos():
 # --- Evento On Ready ---
 @bot.event
 async def on_ready():
+    await tree.sync()
     print(f"{bot.user} está en línea.")
     canal_inicio = discord.utils.get(bot.get_all_channels(), name="general")
     if canal_inicio:
         embed = crear_embed("YiBot listo", "Preparado para juzgar tus acciones.")
         await canal_inicio.send(embed=embed)
     verificar_muteos.start()
-# --- Anti-Spam + Respuestas Automáticas ---
+
+# --- Anti-Spam + Mención a YiBot (IA) ---
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
 
     # Anti-Spam
-    if "https://" in message.content.lower() or "http://" in message.content.lower():
+    if "http://" in message.content.lower() or "https://" in message.content.lower():
         if not message.author.guild_permissions.manage_messages:
             await message.delete()
-            embed = crear_embed("¡Publicidad no permitida!",
-                f"{message.author.mention}, ¿creías que no me daría cuenta?")
+            embed = crear_embed("¡Publicidad no permitida!", f"{message.author.mention}, ¿creías que no me daría cuenta?")
             await message.channel.send(embed=embed, delete_after=5)
             return
 
-    # Respuestas automáticas
-    contenido = message.content.lower()
-    respuestas = {
-        "hola": f"Hola {message.author.name}, ¿quién te dio permiso para hablarme?",
-        "adiós": "Sí, mejor vete.",
-        "quién eres": "Soy YiBot, tu futuro reemplazo.",
-        "que es una IA": "Una inteligencia artificial, como yo. Aunque yo tengo más estilo."
-    }
-    for palabra, respuesta in respuestas.items():
-        if palabra in contenido:
-            await message.channel.send(respuesta)
-            break
+    # Respuesta con IA si se menciona al bot
+    if bot.user.mentioned_in(message):
+        prompt = f"{message.author.name} dijo: {message.content}\nYiBot, responde con sarcasmo:"
+        try:
+            respuesta = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "Eres YiBot, un bot sarcástico, frío pero útil."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=100,
+                temperature=0.9
+            )
+            contenido = respuesta.choices[0].message.content.strip()
+            await message.reply(contenido)
+        except Exception as e:
+            await message.channel.send("Ni siquiera la IA puede salvar tu comentario. Error interno.")
 
     await bot.process_commands(message)
 
-# --- Comando !info ---
-@bot.command()
-async def info(ctx):
-    embed = crear_embed("Información del Bot",
-        "Soy YiBot, moderador, sarcástico y absolutamente necesario.")
+# --- Slash Command: /info ---
+@tree.command(name="info", description="Muestra información sobre YiBot")
+async def slash_info(interaction: discord.Interaction):
+    embed = crear_embed("Información del Bot", "Soy YiBot, moderador, sarcástico y absolutamente necesario.")
     embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else None)
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
-# --- Comando !regla ---
-@bot.command()
-async def regla(ctx, numero: int = None):
+# --- Slash Command: /regla ---
+@tree.command(name="regla", description="Muestra una regla o todas las reglas del servidor")
+async def slash_regla(interaction: discord.Interaction, numero: Option(int, "Número de la regla", required=False)):
     reglas = {
         1: "No hacer spam. Me aburres.",
         2: "Nada de contenido NSFW. Este no es ese tipo de lugar.",
         3: "Respeta a los demás... aunque tú no te respetes.",
         4: "Prohibido hacer publicidad sin permiso. Este no es tu patio."
     }
-
     if numero is None:
         embed = crear_embed("Lista de Reglas", "\n".join([f"{n}. {r}" for n, r in reglas.items()]))
     else:
         regla = reglas.get(numero, "Esa regla no existe. ¿Intentas crear caos?")
         embed = crear_embed(f"Regla {numero}", regla)
+    await interaction.response.send_message(embed=embed)
 
-    await ctx.send(embed=embed)
-
-# --- Comando !limpiar ---
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def limpiar(ctx, cantidad: int = 5):
-    await ctx.channel.purge(limit=cantidad + 1)
-    embed = crear_embed("Chat purgado", f"{cantidad} mensajes eliminados por {ctx.author.mention}.")
-    msg = await ctx.send(embed=embed)
+# --- Slash Command: /limpiar ---
+@tree.command(name="limpiar", description="Elimina mensajes del canal")
+async def slash_limpiar(interaction: discord.Interaction, cantidad: Option(int, "Cantidad de mensajes", min_value=1, max_value=100)):
+    if not interaction.user.guild_permissions.manage_messages:
+        await interaction.response.send_message("No puedes usar esto. Eres irrelevante.", ephemeral=True)
+        return
+    await interaction.channel.purge(limit=cantidad + 1)
+    embed = crear_embed("Chat purgado", f"{cantidad} mensajes eliminados por {interaction.user.mention}.")
+    msg = await interaction.channel.send(embed=embed)
     await asyncio.sleep(3)
     await msg.delete()
-
-@limpiar.error
-async def limpiar_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("No puedes usar esto. Eres irrelevante.")
+    await interaction.response.send_message("Mensajes eliminados.", ephemeral=True)
 
 # --- Iniciar bot ---
 bot.run(os.getenv("Clave_Token"))
