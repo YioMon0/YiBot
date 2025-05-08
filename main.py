@@ -1,5 +1,6 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import tasks
+from discord import Bot, Option
 import json
 import os
 import asyncio
@@ -8,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = Bot(intents=intents)  # Usamos discord.Bot para Slash Commands
 
 # --- Crear Embed Estilizado ---
 def crear_embed(titulo, descripcion, color=discord.Color.red()):
@@ -56,6 +57,7 @@ async def verificar_muteos():
     if cambios:
         guardar_muted(muted)
 
+# --- Evento On Ready ---
 @bot.event
 async def on_ready():
     print(f"{bot.user} está en línea.")
@@ -64,7 +66,6 @@ async def on_ready():
         embed = crear_embed("YiBot listo", "Preparado para juzgar tus acciones.")
         await canal_inicio.send(embed=embed)
     verificar_muteos.start()
-
 # --- Anti-Spam + Respuestas Automáticas ---
 @bot.event
 async def on_message(message):
