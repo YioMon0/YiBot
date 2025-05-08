@@ -14,7 +14,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = discord.app_commands.CommandTree(bot)
 
-openai.api_key = os.getenv("Clave_OpenAI")  # Asegúrate de tener esta clave en tu archivo .env
+openai.api_key = os.getenv("Clave_OpenAI")  # Asegúrar de tener esta clave en mi archivo .env
 
 # --- Crear Embed Estilizado ---
 def crear_embed(titulo, descripcion, color=discord.Color.red()):
