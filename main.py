@@ -137,4 +137,4 @@ async def limpiar_error(ctx, error):
         await ctx.send("No puedes usar esto. Eres irrelevante.")
 
 # --- Iniciar bot ---
-bot.run(os.getenv("Clave_token"))
+bot.run(os.getenv("Clave_Token"))
