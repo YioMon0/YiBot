@@ -226,4 +226,4 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # -------------------- INICIAR EL BOT --------------------
-bot.correr(os.getenv("DISCORD_TOKEN"))
+bot.run(os.getenv("Clave_token"))
