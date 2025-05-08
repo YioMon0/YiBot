@@ -4,7 +4,8 @@ import json
 import os
 import asyncio
 from datetime import datetime, timedelta
-from dotenv import load_dotenv load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
