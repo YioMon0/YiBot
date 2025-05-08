@@ -1,11 +1,10 @@
-from dotenv import load_dotenv
-load_dotenv()
 import discord
 from discord.ext import commands, tasks
 import json
 import os
 import asyncio
 from datetime import datetime, timedelta
+from dotenv import load_dotenv load_dotenv()
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
